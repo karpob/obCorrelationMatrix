@@ -19,26 +19,41 @@ import ncdiag as ncd
 
 def main(files, ichans, nThreads, outpath, instrument):
     # loop through files and process.
+
+    print("Initialize Pool with {} Workers".format(nThreads))
     p = Pool(nThreads)
     # pass ichans in as non-iterable via partial.
+    print("initialized.")
+    print( "Processing {} files".format( len(files) ) )
+    #obStatsList =  processFile(files[0],ichans)
     obStatsList = p.map( partial(processFile, ichans = ichans), files)
-
+    print("Swapping out dictionaries for arrays.")
     # convert list of dictionaries to dictionary of numpy arrays
     obStats = listOfDictsToDictOfLists(obStatsList)        
     # convert list to arrays
     for k in list(obStats.keys()): obStats[k] = np.asarray( obStats[k] )    
-    
+
+    print("Computing overall covariance.") 
     covarianceCombined = total_covariance(obStats['covariance'], obStats['mean'], obStats['count'])
+
+    overallMean = obStats['mean'].mean()
+    observationCount = obStats['count'].sum()
+    print("Computing Correlation.")
     correlationCombined = covarianceToCorrelation( covarianceCombined )
+
+    print("Writing File.")
     with h5py.File( os.path.join(outpath, instrument+'.h5'),"w" ) as f:
-        dset = f.create_dataset("covarianceCombined",data = correlationCombined)
+        dset = f.create_dataset("correlationCombined",data = correlationCombined)
+        dset = f.create_dataset("covarianceCombined",data = covarianceCombined)
+        dset = f.create_dataset("overallMean",data = overallMean)
+        dset = f.create_dataset("observationCount",data = observationCount)
         dset = f.create_dataset("channels",data = ichans)
+    print("Done.")
     #plt.matshow(correlationCombined)
     #plt.colorbar()
     #plt.show()
     #import pickle
     #pickle.dump( correlationCombined, open( "save2multi.p", "wb" ) )
-
 
 def covarianceToCorrelation(covariance):
     """
@@ -82,17 +97,17 @@ def listOfDictsToDictOfLists(listOfDicts):
 
 
 def processFile(f, ichans):
-    
+    print(f) 
     d1 = ncd.obs(f)
     sensor_chan = d1.v('sensor_chan')
-
+    
     # if ichans is an empty list, use alll sensor_chans
     if(len(ichans) == 0): ichans = sensor_chan
-
+    print(ichans)
     # get locations where all channels pass QC.
     idxUse = getIdxAllChansPassQc(d1, ichans, sensor_chan)
     obList = []
-
+    #Read in obs, and append only locations where all channels pass QC
     for i in list(ichans):
         subsetChan, = np.where(sensor_chan == i)[0] + 1
         mask = '(ichan == {:d})'.format(subsetChan)
@@ -101,7 +116,6 @@ def processFile(f, ichans):
         obList.append(d1.v('obs')[idxUse])
     # make list into array, and make first dimension ob location, second dimension channel.
     obArray = np.asarray(obList).T
-    print("ob array min and max", obArray.min().min(), obArray.max().max())
     # do stats on file f.
     obStats = {}
     obStats['count'] = obArray.shape[0]
