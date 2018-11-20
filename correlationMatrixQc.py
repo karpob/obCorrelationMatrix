@@ -35,11 +35,7 @@ def main(files, ichans, nThreads, outpath, instrument):
 
     print("Computing overall covariance.") 
     covarianceCombined = total_covariance(obStats['covariance'], obStats['mean'], obStats['count'])
-<<<<<<< HEAD
     print("Done overall covariance.")
-=======
-
->>>>>>> 2e13ee685c515d961a645e2af92c39493376d4d0
     overallMean = obStats['mean'].mean()
     observationCount = obStats['count'].sum()
     print("Computing Correlation.")
