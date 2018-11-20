@@ -35,7 +35,11 @@ def main(files, ichans, nThreads, outpath, instrument):
 
     print("Computing overall covariance.") 
     covarianceCombined = total_covariance(obStats['covariance'], obStats['mean'], obStats['count'])
+<<<<<<< HEAD
     print("Done overall covariance.")
+=======
+
+>>>>>>> 2e13ee685c515d961a645e2af92c39493376d4d0
     overallMean = obStats['mean'].mean()
     observationCount = obStats['count'].sum()
     print("Computing Correlation.")
@@ -132,6 +136,7 @@ def total_covariance(covs, means, N):
     c_shape = covs.shape
     grand_mean = np.dot(means.T, N) / (np.sum(N))
     ess = np.sum((covs.reshape((covs.shape[0], -1)) * (N - 1).reshape(N.shape[0], 1)).reshape(c_shape), axis=0)
+    print("N, means shape, grand mean shape",N, means.shape,grand_mean.shape)
     # too much ram with this bit, use a running sum instead!
     #tgss = np.sum([ np.outer(x, x) * n for x, n  in zip(means - grand_mean, N)], axis=0)
     tgss = np.zeros([grand_mean.shape[0],grand_mean.shape[0]])
@@ -144,7 +149,6 @@ def total_covariance(covs, means, N):
     val = ess + tgss 
     val = val/tot
     return val
- 
 
 if __name__ == "__main__":
 
