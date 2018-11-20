@@ -32,12 +32,7 @@ def plotInstrument(instrument):
             listToRemove.append(n)
         else:
             listToKeep.append(i)
-    for ll in geosAssimilated:
-        if ll not in listToKeep:
-            print('what?',ll)
-    #print("listToKeep", listToKeep)
-    #print("Off",len(listToRemove) )
-    #print("On",geosAssimilated)
+
     listToRemove.sort()
     corr = np.delete(corr,listToRemove, axis=0)
     corr = np.delete(corr,listToRemove, axis=1)
@@ -54,7 +49,7 @@ def plotInstrument(instrument):
     print(corr.shape,len(wavenumbersRounded),len(geosAssimilated))
     plt.savefig(instrument+'.png')
 if __name__ == "__main__":
-    #plotInstrument('airs')
+    plotInstrument('airs')
     plotInstrument('cris')
-    #plotInstrument('iasi')
+    plotInstrument('iasi')
     plotInstrument('cris-fsr')
