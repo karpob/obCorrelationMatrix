@@ -35,7 +35,7 @@ def main(files, ichans, nThreads, outpath, instrument):
 
     print("Computing overall covariance.") 
     covarianceCombined = total_covariance(obStats['covariance'], obStats['mean'], obStats['count'])
-
+    print("Done overall covariance.")
     overallMean = obStats['mean'].mean()
     observationCount = obStats['count'].sum()
     print("Computing Correlation.")
@@ -71,7 +71,7 @@ def getIdxAllChansPassQc(d, ichans, sensor_chan ):
     qcVals = {}
     for i in list(ichans):
         subsetChan, = np.where(sensor_chan == i)[0] + 1
-        mask = '(ichan == {:d})'.format(subsetChan)
+        mask = '(ichan == {:d}) & (Water_Fraction == 1.0)  '.format(subsetChan)
         d.set_mask(mask)
         d.use_mask(True)
         qcVals[i] = d.v('QC_Flag')
@@ -110,10 +110,11 @@ def processFile(f, ichans):
     #Read in obs, and append only locations where all channels pass QC
     for i in list(ichans):
         subsetChan, = np.where(sensor_chan == i)[0] + 1
-        mask = '(ichan == {:d})'.format(subsetChan)
+        mask = '(ichan == {:d}) & (Water_Fraction == 1.0)'.format(subsetChan)
         d1.set_mask(mask)
         d1.use_mask(True)
-        obList.append(d1.v('obs')[idxUse])
+        #obList.append(d1.v('obs')[idxUse])
+        obList.append(d1.v('Obs_Minus_Forecast_unadjusted')[idxUse])
     # make list into array, and make first dimension ob location, second dimension channel.
     obArray = np.asarray(obList).T
     # do stats on file f.
@@ -126,13 +127,23 @@ def processFile(f, ichans):
 def total_covariance(covs, means, N):
     """
     Stolen from https://github.com/serega/statistika/blob/master/TotalCovariance.ipynb
+    But changed so ram footprint doesn't break on discover.
     """
     c_shape = covs.shape
     grand_mean = np.dot(means.T, N) / (np.sum(N))
     ess = np.sum((covs.reshape((covs.shape[0], -1)) * (N - 1).reshape(N.shape[0], 1)).reshape(c_shape), axis=0)
-    tgss = np.sum([ np.outer(x, x) * n for x, n  in zip(means - grand_mean, N)], axis=0) 
-    return (ess + tgss) / (np.sum(N) - 1)
-
+    # too much ram with this bit, use a running sum instead!
+    #tgss = np.sum([ np.outer(x, x) * n for x, n  in zip(means - grand_mean, N)], axis=0)
+    tgss = np.zeros([grand_mean.shape[0],grand_mean.shape[0]])
+    for i,count in enumerate(N):
+        # this weirdness is because we're getting strange numpy behavior on Discover if we multiply scalars by arrays.
+        a = np.outer(means[i] - grand_mean, means[i] - grand_mean)
+        a = a*count
+        tgss += a
+    tot = np.sum(N) - 1
+    val = ess + tgss 
+    val = val/tot
+    return val
  
 
 if __name__ == "__main__":
