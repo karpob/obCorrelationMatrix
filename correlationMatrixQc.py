@@ -31,7 +31,9 @@ def main(files, ichans, nThreads, outpath, instrument):
     # convert list of dictionaries to dictionary of numpy arrays
     obStats = listOfDictsToDictOfLists(obStatsList)        
     # convert list to arrays
-    for k in list(obStats.keys()): obStats[k] = np.asarray( obStats[k] )    
+    print('obstat keys', obStats.keys() )
+    for k in list(obStats.keys()): 
+        obStats[k] = np.asarray( obStats[k] )
 
     print("Computing overall covariance.") 
     covarianceCombined = total_covariance(obStats['covariance'], obStats['mean'], obStats['count'])
@@ -49,11 +51,6 @@ def main(files, ichans, nThreads, outpath, instrument):
         dset = f.create_dataset("observationCount",data = observationCount)
         dset = f.create_dataset("channels",data = ichans)
     print("Done.")
-    #plt.matshow(correlationCombined)
-    #plt.colorbar()
-    #plt.show()
-    #import pickle
-    #pickle.dump( correlationCombined, open( "save2multi.p", "wb" ) )
 
 def covarianceToCorrelation(covariance):
     """
@@ -64,32 +61,15 @@ def covarianceToCorrelation(covariance):
     correlation =  dinv*np.matrix(covariance)*dinv
     return correlation
 
-def getIdxAllChansPassQc(d, ichans, sensor_chan ):
-    """
-    Iterate through all channels, and get the subset of obs where all channels pass QC.
-    """
-    qcVals = {}
-    for i in list(ichans):
-        subsetChan, = np.where(sensor_chan == i)[0] + 1
-        mask = '(ichan == {:d}) & (Water_Fraction == 1.0)  '.format(subsetChan)
-        d.set_mask(mask)
-        d.use_mask(True)
-        qcVals[i] = d.v('QC_Flag')
-
-    first = True
-    for i in list(qcVals.keys()):
-        if(first):
-            combinedQc = qcVals[i]
-            first = False
-        else: combinedQc += qcVals[i]
-
-    allGoodObsIdx, = np.where( combinedQc == 0)
-
-    return allGoodObsIdx 
-
 def listOfDictsToDictOfLists(listOfDicts):
     dictOfLists = {}
-    for k in list(listOfDicts[0].keys()): dictOfLists[k]=[]
+    keys = []
+    for i in range(len(listOfDicts)):
+        for k in list(listOfDicts[i].keys()):
+            if k not in keys:
+                keys.append(k)
+
+    for k in keys: dictOfLists[k]=[]
     for item in listOfDicts:
         for k in list(item.keys()):
             dictOfLists[k].append(item[k])
@@ -105,24 +85,43 @@ def processFile(f, ichans):
     if(len(ichans) == 0): ichans = sensor_chan
     print(ichans)
     # get locations where all channels pass QC.
-    idxUse = getIdxAllChansPassQc(d1, ichans, sensor_chan)
+    ombList = []
     obList = []
-    #Read in obs, and append only locations where all channels pass QC
+    oList = []
+    qcList = []
+    waterList = [] 
     for i in list(ichans):
         subsetChan, = np.where(sensor_chan == i)[0] + 1
-        mask = '(ichan == {:d}) & (Water_Fraction == 1.0)'.format(subsetChan)
+        mask = '(ichan == {:d})'.format(subsetChan)
         d1.set_mask(mask)
         d1.use_mask(True)
-        #obList.append(d1.v('obs')[idxUse])
-        obList.append(d1.v('Obs_Minus_Forecast_unadjusted')[idxUse])
+        obList.append(d1.v('obs'))
+        ombList.append(d1.v('Obs_Minus_Forecast_unadjusted'))
+        waterList.append(d1.v('Water_Fraction'))
+        qcList.append(d1.v('qcmark'))
+    
     # make list into array, and make first dimension ob location, second dimension channel.
+    ombArray = np.asarray(ombList).T
     obArray = np.asarray(obList).T
+    waterArray = np.asarray(waterList).T
+    qcArray = np.asarray(qcList).T
+    badLocs = []
+
+    # filtering manually in python by location. Any channel at a location bad, drop all channels at that observation point.
+    for i in range(ombArray.shape[0]):
+        if( any(waterArray[i,:] == 1.0) or any(qcArray[i,:] != 0) or any(obArray[i,:] <= 0) ):
+            badLocs.append(i) 
+    ombArray = np.delete(ombArray, badLocs, axis=0)                
+                
     # do stats on file f.
     obStats = {}
-    obStats['count'] = obArray.shape[0]
-    obStats['covariance'] = np.cov(obArray,rowvar=False) 
-    obStats['mean'] = obArray.mean(axis=0)
-    return obStats
+    if(ombArray.shape[0] < 2):
+        return obStats
+    else:
+        obStats['count'] = ombArray.shape[0]
+        obStats['covariance'] = np.cov(ombArray,rowvar=False) 
+        obStats['mean'] = ombArray.mean(axis=0)
+        return obStats
 
 def total_covariance(covs, means, N):
     """
@@ -147,17 +146,6 @@ def total_covariance(covs, means, N):
     return val
 
 if __name__ == "__main__":
-
-    sensorOzoneChannelSets = {}
-    sensorOzoneChannelSets['cris-fsr'] = [ 592, 594, 596, 598, 600, 602, 604, 611, 614, 616, 618, 620, 622, 626, 638, 646, 648, 652, 659]
-    sensorOzoneChannelSets['cris'] =  [556, 557, 558, 560, 561, 562, 564, 565, 566, 569, 573, 574, 577, 580, 581, 584, 585, 587, 590, 591, 594,\
-                                       597, 598, 601, 604, 607, 611, 614, 616, 617, 619, 622, 626, 628, 634, 637, 638, 640, 641, 642, 644, 646,\
-                                       647, 650, 651, 652, 654, 655, 657, 659, 663, 667, 670] 
-    sensorOzoneChannelSets['iasi']  = [1409, 1414, 1420, 1424, 1427, 1430, 1434, 1440, 1442, 1445, 1450, 1454, 1460, 1463, 1469, 1474, 1479, 1483, 1487, 1494,\
-                                      1496, 1502, 1505, 1510, 1513, 1518, 1521, 1526, 1529, 1532, 1537, 1541, 1545, 1548, 1553, 1560, 1568, 1574, 1579, 1583,\
-                                      1587, 1606, 1626, 1639, 1643, 1652, 1659, 1666, 1671, 1675, 1681, 1694, 1697]
-    sensorOzoneChannelSets['airs'] =[ 1003, 1012, 1019, 1024, 1030, 1038, 1069, 1115, 1116, 1119, 1123 , 1130]
-
     parser = argparse.ArgumentParser( description = 'read ncdiag files and create correlation matrix')
     parser.add_argument('--path', help = 'path to ncdiag', required = True, dest = 'path')
     parser.add_argument('--outpath', help = 'path to ncdiag', required = True, dest = 'outpath')
@@ -166,13 +154,21 @@ if __name__ == "__main__":
     parser.add_argument('--nthreads', help="number of threads", dest='nthreads', type=int, required=False, default=2 )
     a = parser.parse_args()
 
-    if a.instrument not in list(sensorOzoneChannelSets.keys()): sys.exit("'{}' instrument unknown".format(a.instrument))
+    #if a.instrument not in list(sensorOzoneChannelSets.keys()): sys.exit("'{}' instrument unknown".format(a.instrument))
     if not os.path.exists(a.path): sys.exit("'{} path does not exist.".format(a.path))
     if not os.path.exists(a.outpath): sys.exit("'{} outpath does not exist.".format(a.path))
 
+    h5 = h5py.File('etc/'+a.instrument+'_wavenumbers.h5','r')
+    idxBufrSubset = np.asarray(h5['idxBufrSubset']).astype('int')
+    ichans = np.asarray(h5['geosAssimilated']).astype('int').tolist()
+    idxNucapsOzoneInInstrument = np.asarray(h5['idxNucapsOzoneInInstrument']).astype('int')
+    for i in idxBufrSubset:
+        if i >= min(idxNucapsOzoneInInstrument) and i <= max(idxNucapsOzoneInInstrument):
+            ichans.append(i)
+
+    ichans.sort()
+
     # use given path and grab all nc diag files with instrument name in them.
     files = glob.glob( os.path.join(a.path,'*'+a.instrument+'*.nc4') )
-    if a.all: ichans = []
-    else: ichans = sensorOzoneChannelSets[a.instrument]   
 
     main(files, ichans, a.nthreads, a.outpath, a.instrument)    
