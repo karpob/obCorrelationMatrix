@@ -48,7 +48,7 @@ def plotInstrument(instrument):
     plt.xticks(np.arange(len(geosAssimilated)),wavenumbersRounded,fontsize=8,rotation='vertical')
     plt.yticks(np.arange(len(geosAssimilated)),wavenumbersRounded,fontsize=8)
     plt.colorbar() 
-
+    plt.savefig(instrument+'_geos_only.png')
 if __name__ == "__main__":
     plotInstrument('airs')
     plotInstrument('cris')
