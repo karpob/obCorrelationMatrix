@@ -92,7 +92,7 @@ def computeInstrument(instrument):
         plt.close()
         eigenVals.append(p[0])
         if(cumulativeExplained[i] < 95.0 or len(eigenVecs) < 5):
-            eigenVecs.append( p[1] )
+            eigenVecs.append( ( p[1] - np.mean( p[1] ) ) / np.std( p[1] ) )
     plt.figure()
     plt.title('Eigenvalues for {}'.format(instrument.upper().replace('CRIS','CrIS')))
     plt.plot(np.arange(1,len(eigenVals)+1), eigenVals)
@@ -103,7 +103,7 @@ def computeInstrument(instrument):
 
     plt.figure()
     plt.matshow( np.asarray(eigenVecs),aspect=1, cmap = cm.coolwarm, vmax = np.asarray(eigenVecs).max(), vmin = -1.0*np.asarray(eigenVecs).max()  )
-    plt.title(instrument.upper().replace('CRIS','CrIS')+' PCA Eigenvectors vs. Cumulative Explained Variance %')
+    plt.title(instrument.upper().replace('CRIS','CrIS')+' PCA Eigenvectors/Loadings (x)')
     fig = plt.gcf()
     R =float(len(eigenVecs))/float(len(wavenumbersRounded))
     fig.set_size_inches(10,10*R+1.75)
@@ -117,7 +117,7 @@ def computeInstrument(instrument):
     ax = fig.gca()
     ax.xaxis.set_ticks_position('bottom')
     cbar = plt.colorbar()
-    cbar.ax.set_ylabel('PCA loading/Eigenvector')
+    cbar.ax.set_ylabel('(x - $\overline{x})/\sigma_{x}$')
     plt.savefig(instrument+'_pca_loadings.png')
 
 if __name__ == "__main__":
