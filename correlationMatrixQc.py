@@ -17,40 +17,38 @@ import matplotlib.pyplot as plt
 import gmao_tools as gt
 import ncdiag as ncd
 
-def main(files, ichans, nThreads, outpath, instrument):
+def main(files, ichans, igeos, nThreads, outpath, instrument, select_obs_omf_oma):
     # loop through files and process.
 
     print("Initialize Pool with {} Workers".format(nThreads))
     p = Pool(nThreads)
     # pass ichans in as non-iterable via partial.
-    print("initialized.")
-    print( "Processing {} files".format( len(files) ) )
-    #obStatsList =  processFile(files[0],ichans)
-    obStatsList = p.map( partial(processFile, ichans = ichans), files)
+    print("Initialized Pool.")
+    print( "Processing {} files.".format( len(files) ) )
+    obStatsList = p.map( partial(processFile, ichans = ichans, igeos= igeos, select_obs_omf_oma = select_obs_omf_oma), files)
     print("Swapping out dictionaries for arrays.")
     # convert list of dictionaries to dictionary of numpy arrays
     obStats = listOfDictsToDictOfLists(obStatsList)        
+
     # convert list to arrays
-    print('obstat keys', obStats.keys() )
     for k in list(obStats.keys()): 
         obStats[k] = np.asarray( obStats[k] )
-
+    print(obStats.keys())
     print("Computing overall covariance.") 
-    covarianceCombined = total_covariance(obStats['covariance'], obStats['mean'], obStats['count'])
+    covarianceCombined, overallMean = total_covariance(obStats['covariance'], obStats['mean'], obStats['count'])
     print("Done overall covariance.")
-    overallMean = obStats['mean'].mean()
-    observationCount = obStats['count'].sum()
+    observationCount = obStats['count']
     print("Computing Correlation.")
     correlationCombined = covarianceToCorrelation( covarianceCombined )
 
-    print("Writing File.")
+    print('Writing File: {}'.format( os.path.join(outpath, instrument+'.h5') ) )
     with h5py.File( os.path.join(outpath, instrument+'.h5'),"w" ) as f:
         dset = f.create_dataset("correlationCombined",data = correlationCombined)
         dset = f.create_dataset("covarianceCombined",data = covarianceCombined)
         dset = f.create_dataset("overallMean",data = overallMean)
         dset = f.create_dataset("observationCount",data = observationCount)
         dset = f.create_dataset("channels",data = ichans)
-    print("Done.")
+    print("Done!")
 
 def covarianceToCorrelation(covariance):
     """
@@ -76,27 +74,33 @@ def listOfDictsToDictOfLists(listOfDicts):
     return dictOfLists
 
 
-def processFile(f, ichans):
-    print(f) 
+def processFile(f, ichans, igeos, select_obs_omf_oma ):
+    print( 'Processing File {}'.format(f) ) 
     d1 = ncd.obs(f)
     sensor_chan = d1.v('sensor_chan')
-    
     # if ichans is an empty list, use alll sensor_chans
     if(len(ichans) == 0): ichans = sensor_chan
-    print(ichans)
     # get locations where all channels pass QC.
     ombList = []
     obList = []
     oList = []
     qcList = []
-    waterList = [] 
+    waterList = []
+    # create idx associated with geos assimilated channel
+    idx_geos_assim = []
+    for ii,c in enumerate(ichans):
+        if (c in igeos):
+            idx_geos_assim.append(ii)
+    # go through each channel, filter it using ncdiag API, 
+    # create a big list of observations (spatial dimension) for a given channel, 
+    # add the list for a given channel to the bigger list so obList[channel][spatial]
     for i in list(ichans):
         subsetChan, = np.where(sensor_chan == i)[0] + 1
         mask = '(ichan == {:d})'.format(subsetChan)
         d1.set_mask(mask)
         d1.use_mask(True)
         obList.append(d1.v('obs'))
-        ombList.append(d1.v('Obs_Minus_Forecast_unadjusted'))
+        ombList.append(d1.v(select_obs_omf_oma))
         waterList.append(d1.v('Water_Fraction'))
         qcList.append(d1.v('qcmark'))
     
@@ -109,13 +113,13 @@ def processFile(f, ichans):
 
     # filtering manually in python by location. Any channel at a location bad, drop all channels at that observation point.
     for i in range(ombArray.shape[0]):
-        if( any(waterArray[i,:] == 1.0) or any(qcArray[i,:] != 0) or any(obArray[i,:] <= 0) ):
+        if( any( waterArray[i,:] < 1.0 ) or any(qcArray[i,idx_geos_assim] != 0) or any(obArray[i,:] <= 0) ):
             badLocs.append(i) 
     ombArray = np.delete(ombArray, badLocs, axis=0)                
                 
     # do stats on file f.
     obStats = {}
-    if(ombArray.shape[0] < 2):
+    if(ombArray.shape[0] < 1):
         return obStats
     else:
         obStats['count'] = ombArray.shape[0]
@@ -134,16 +138,18 @@ def total_covariance(covs, means, N):
     print("N, means shape, grand mean shape",N, means.shape,grand_mean.shape)
     # too much ram with this bit, use a running sum instead!
     #tgss = np.sum([ np.outer(x, x) * n for x, n  in zip(means - grand_mean, N)], axis=0)
+    
     tgss = np.zeros([grand_mean.shape[0],grand_mean.shape[0]])
     for i,count in enumerate(N):
         # this weirdness is because we're getting strange numpy behavior on Discover if we multiply scalars by arrays.
         a = np.outer(means[i] - grand_mean, means[i] - grand_mean)
         a = a*count
         tgss += a
+    
     tot = np.sum(N) - 1
     val = ess + tgss 
     val = val/tot
-    return val
+    return val, grand_mean
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser( description = 'read ncdiag files and create correlation matrix')
@@ -152,6 +158,7 @@ if __name__ == "__main__":
     parser.add_argument('--instrument',help = 'instrument name to process', required = True, dest='instrument')
     parser.add_argument('--all', help="use all channels in instrument",action="store_true",required=False)
     parser.add_argument('--nthreads', help="number of threads", dest='nthreads', type=int, required=False, default=2 )
+    parser.add_argument('--select', help="select obs omf oma", dest='select', required=False, default='omf' )
     a = parser.parse_args()
 
     #if a.instrument not in list(sensorOzoneChannelSets.keys()): sys.exit("'{}' instrument unknown".format(a.instrument))
@@ -161,14 +168,15 @@ if __name__ == "__main__":
     h5 = h5py.File('etc/'+a.instrument+'_wavenumbers.h5','r')
     idxBufrSubset = np.asarray(h5['idxBufrSubset']).astype('int')
     ichans = np.asarray(h5['geosAssimilated']).astype('int').tolist()
+    igeos = np.asarray(h5['geosAssimilated']).astype('int').tolist()
     idxNucapsOzoneInInstrument = np.asarray(h5['idxNucapsOzoneInInstrument']).astype('int')
     for i in idxBufrSubset:
         if i >= min(idxNucapsOzoneInInstrument) and i <= max(idxNucapsOzoneInInstrument):
             ichans.append(i)
 
     ichans.sort()
-
+    
     # use given path and grab all nc diag files with instrument name in them.
     files = glob.glob( os.path.join(a.path,'*'+a.instrument+'*.nc4') )
 
-    main(files, ichans, a.nthreads, a.outpath, a.instrument)    
+    main(files, ichans, igeos, a.nthreads, a.outpath, a.instrument, a.select)    
