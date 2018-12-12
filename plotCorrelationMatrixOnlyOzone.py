@@ -33,8 +33,13 @@ def plotInstrument(instrument):
     wavenumbers = np.asarray(h5['wavenumbers'])
     h5 = h5py.File(instrument+'.h5','r')
     corr = np.asarray(h5['correlationCombined'])
-    corr = np.delete(corr,dropEm, axis=0)
-    corr = np.delete(corr,dropEm, axis=1)
+    sigma = np.diag(  np.asarray( h5['covarianceCombined'] )  )
+    sigma = np.delete(sigma,dropEm, axis=0)
+    omf = np.asarray( h5['overallMean'] )
+    omf = np.delete(omf, dropEm, axis=0)
+
+    corr = np.delete(corr, dropEm, axis=0)
+    corr = np.delete(corr, dropEm, axis=1)
 
     print("read instrument: {}".format(instrument))
     #print("corr shape {}, geosAssimilated {}, idxBufrSubset {}".format(corr.shape,len(geosAssimilated),len(idxBufrSubset), len(geosAssimilated) ) )
@@ -47,11 +52,15 @@ def plotInstrument(instrument):
     wavenumbersRounded = []
     for w in wavenumbers[geosAssimilated.astype(int)]:
         wavenumbersRounded.append('{:10.3f}'.format(w))
-    plt.xticks(np.arange(len(geosAssimilated)),wavenumbersRounded,fontsize=32,rotation='vertical')
-    plt.yticks(np.arange(len(geosAssimilated)),wavenumbersRounded,fontsize=32)
+    plt.xticks(np.arange(len(geosAssimilated)),wavenumbersRounded,fontsize=18,rotation='vertical')
+    plt.yticks(np.arange(len(geosAssimilated)),wavenumbersRounded,fontsize=18)
     plt.colorbar()
     print(corr.shape,len(wavenumbersRounded),len(geosAssimilated))
     plt.savefig(instrument+'_ozone_only.png')
+    print('OMF over sigma for {}'.format(instrument))
+    for ii,w in enumerate(wavenumbersRounded):
+        print(geosAssimilated[ii]+1, w, omf[ii], np.sqrt(sigma[ii]), (omf[ii]**2)/sigma[ii] )
+    
 if __name__ == "__main__":
     plotInstrument('airs')
     plotInstrument('cris')
