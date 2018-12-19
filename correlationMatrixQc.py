@@ -163,7 +163,7 @@ if __name__ == "__main__":
 
     #if a.instrument not in list(sensorOzoneChannelSets.keys()): sys.exit("'{}' instrument unknown".format(a.instrument))
     if not os.path.exists(a.path): sys.exit("'{} path does not exist.".format(a.path))
-    if not os.path.exists(a.outpath): sys.exit("'{} outpath does not exist.".format(a.path))
+    if not os.path.exists(a.outpath): sys.exit("'{} outpath does not exist.".format(a.outpath))
 
     h5 = h5py.File('etc/'+a.instrument+'_wavenumbers.h5','r')
     idxBufrSubset = np.asarray(h5['idxBufrSubset']).astype('int')
