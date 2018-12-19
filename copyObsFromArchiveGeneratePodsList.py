@@ -24,7 +24,9 @@ def getFiles(start, end, instrument, opsPath, experimentName, anlOrGes, ncOrBin)
         for hour in ['00','06','12','18']:
             path = os.path.join(pathInit, today.strftime("Y%Y/M%m/D%d"), 'H'+hour)
             if not os.path.exists(path): print(path +'does not exist.' )
-            else: files.append(glob.glob(path+'/*'+instrument+'*'+anlOrGes+'*.'+ncOrBin)[0])
+            else:
+                if( len( glob.glob(path+'/*'+instrument+'*'+anlOrGes+'*.'+ncOrBin) ) > 0): 
+                    files.append(glob.glob(path+'/*'+instrument+'*'+anlOrGes+'*.'+ncOrBin)[0])
     return files            
 
 if __name__ == "__main__":
