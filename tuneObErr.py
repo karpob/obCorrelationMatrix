@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 import argparse, os, sys, glob
 import numpy as np
+import matplotlib 
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+from lib.maps import plotMapHist 
 # these tools are Will's.  They are available from:
 #    https://github.com/will-mccarty/das_tools
 # which also is in 
@@ -26,13 +29,17 @@ def processFile(f, ichans, select_obs_omf_oma, target):
     print("Channel  mean(omf_uncorrected)    mean(omf_corrected)  cpen             RMS(omf)         STD(omf)        mean(sigo) ")
     for i in list(ichans):
         subsetChan, = np.where(sensor_chan == i)[0] + 1
-        mask = '(ichan == {:d}) & (qcmark == 0)'.format(subsetChan)
+        mask = '(ichan == {:d}) & (qcmark == 0) & ( ob > 0.0 )'.format(subsetChan)
         d1.set_mask(mask)
         d1.use_mask(True)
         omf = d1.v('omf')
+        #oma = d1.v('oma')
+        lat = d1.v('lat')
+        lon = d1.v('lon')
         omfnbc = d1.v('omfnbc')
         cpen = d1.stat('cpen','omf')
         sigoDesired = np.sqrt(np.mean((omf**2))/target)
+        plotMapHist(lat, lon, omf, 'Channel {:d} OMF for file {}'.format(i,os.path.basename(f)), os.path.basename(f)+'_Chan{:d}'.format(i), units='Kelvin') 
         print( "{:d}     {:10.7f}               {:10.7f}           {:10.7f}       {:10.7f}       {:10.7f}     {:10.7f}  {:10.7f}".format(\
                   i,    omfnbc.mean(),          omf.mean(),        cpen,          np.sqrt( np.mean( (omf)**2 ) ) , np.std(omf), d1.v('sigo').mean(), sigoDesired ) )
     
