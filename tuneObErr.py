@@ -90,7 +90,7 @@ if __name__ == "__main__":
     instrumentChan = {}
     instrumentChan['iasi'] = [1427, 1479, 1536, 1579, 1585, 1626, 1643, 1671]
     instrumentChan['airs'] = [1012, 1024, 1088, 1111, 1120, 1669] 
-    instrumentChan['cris'] = [577, 607, 626, 650, 667, 945, 991, 994]
+    instrumentChan['cris_npp'] = [577, 607, 626, 650, 667, 945, 991, 994]
     instrumentChan['cris-fsr'] = [596, 626, 646, 659]  
 
     ichans = instrumentChan[a.instrument]
