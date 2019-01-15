@@ -3,7 +3,7 @@ import argparse, os, sys, glob
 import numpy as np
 import matplotlib 
 matplotlib.use('Agg')
-from datetime import timedelta, date
+from datetime import timedelta, date, datetime
 import matplotlib.pyplot as plt
 from lib.maps import plotMapHist 
 # these tools are Will's.  They are available from:
@@ -16,11 +16,36 @@ from lib.maps import plotMapHist
 # ncdiag.py is an interface to handle the netcdf4 obs diag files 
 import gmao_tools as gt
 import ncdiag as ncd
+import pandas as pd
 
-def main(files, ichans, select_obs_omf_oma, target):
-    for f in list(files):    
-        obStatsList = processFile(f, ichans, select_obs_omf_oma, target) 
-
+def main(files, ichans, select_obs_omf_oma, target, mapsOn):
+    chanStatList = []
+    experiment = os.path.basename(files[0]).split('.')[0]
+    instrument = os.path.basename(files[0]).split('.')[1].split('_')[1]
+    start = os.path.basename(files[0]).split('.')[2]
+    end = os.path.basename(files[-1]).split('.')[2]
+    # loop through files generate maps
+    for f in list(files): 
+        chanStatList.extend( processFile(f, ichans, select_obs_omf_oma, target, mapsOn) )
+    chanStatArray = np.asarray(chanStatList)
+    timeIndex = chanStatArray[:,0]
+    df = pd.DataFrame(chanStatArray, index = timeIndex, columns= ['date', 'channel', 'Bias','OmF', 'Penalty', 'rmse', 'std', 'sigo','sigo_desired'])
+    grouped = df.groupby('channel')
+    f, ax = plt.subplots(nrows=len(ichans), ncols=1, figsize=(14,3*len(ichans)) )
+    i = 0
+    for n, g in grouped:
+        g.plot(ax = ax[i], y=['Bias','OmF','Penalty'],legend=False)
+        dd = g['date'].values
+        omf = np.array(g['OmF'].values,dtype=np.float64)
+        std = np.array(g['std'].values,dtype = np.float64)
+        ax[i].fill_between(dd, omf+std, omf-std, alpha=0.3, facecolor='orange')
+        ax[i].set_title('Channel {:d} Bias = {:.4f} Mean OmF = {:.4f} Std= {:.4f} Penalty= {:.4f} RMSE = {:.4f} $\sigma_o$= {:.4f} $\sigma_o(desired)$= {:4f}'.format(ichans[i], g['Bias'].mean(), g['OmF'].mean(), g['std'].mean(), g['Penalty'].mean(), g['rmse'].mean(), g['sigo'].mean(), g['sigo_desired'].mean() ) )
+        ax[i].set_ylabel('Kelvin')
+        ax[i].legend(bbox_to_anchor= (1.1,1),loc='upper right')
+        i+=1
+    plt.tight_layout()
+    plt.savefig(experiment+'_'+instrument+'_'+start+'_'+end+'_stats_timeseries.png')
+  
 def dateRange(start_date, end_date):
     for n in range(int ((end_date - start_date).days)):
         yield start_date + timedelta(n)
@@ -48,11 +73,13 @@ def getFiles(start, end, instrument, opsPath, experimentName, anlOrGes, ncOrBin)
     return files            
 
 
-def processFile(f, ichans, select_obs_omf_oma, target):
-    print( 'Stats for: {}'.format(f) ) 
+def processFile(f, ichans, select_obs_omf_oma, target, mapsOn):
+    print( 'Stats for: {}'.format(f) )
+    dtg = os.path.basename(f.split('.')[-2])
+    dateTag = datetime(int(dtg[0:4]), int(dtg[4:6]), int(dtg[6:8]), int(dtg[9:11]))
     d1 = ncd.obs(f)
     sensor_chan = d1.v('sensor_chan')
-    
+    chanStats = []
     # go through each channel, filter it using ncdiag API, 
     print("Channel  mean(omf_uncorrected)    mean(omf_corrected)  cpen             RMS(omf)         STD(omf)        mean(sigo) ")
     for i in list(ichans):
@@ -67,11 +94,24 @@ def processFile(f, ichans, select_obs_omf_oma, target):
         omfnbc = d1.v('omfnbc')
         cpen = d1.stat('cpen','omf')
         sigoDesired = np.sqrt(np.mean((omf**2))/target)
-        plotMapHist(lat, lon, omf, 'Channel {:d} OMF for file {}'.format(i,os.path.basename(f)), os.path.basename(f)+'_Chan{:d}'.format(i), units='Kelvin') 
+        
+        # Generate and save some stats.
+        s ={}
+        s['Channel'] = i 
+        s['bias'] = omfnbc.mean()
+        s['omf'] = omf.mean()
+        s['penalty'] = cpen
+        s['rmse'] = np.sqrt( np.mean( (omf)**2 ) )
+        s['std'] = np.std(omf)
+        s['sigo'] = d1.v('sigo').mean()
+        s['sigo_desired'] = sigoDesired
+        if(mapsOn):
+            plotMapHist(lat, lon, omf, 'Channel {:d} OMF for file {}'.format(i,os.path.basename(f)), os.path.basename(f)+'_Chan{:d}'.format(i), units='Kelvin') 
         print( "{:d}     {:10.7f}               {:10.7f}           {:10.7f}       {:10.7f}       {:10.7f}     {:10.7f}  {:10.7f}".format(\
-                  i,    omfnbc.mean(),          omf.mean(),        cpen,          np.sqrt( np.mean( (omf)**2 ) ) , np.std(omf), d1.v('sigo').mean(), sigoDesired ) )
+                  i,    s['bias'],          s['omf'],        s['penalty'],         s['rmse'] , s['std'], s['sigo'], s['sigo_desired'] ) )
     
-
+        chanStats.append([dateTag, i, s['bias'], s['omf'], s['penalty'], s['rmse'] , s['std'], s['sigo'], s['sigo_desired'] ])
+    return chanStats
 if __name__ == "__main__":
     parser = argparse.ArgumentParser( description = 'read ncdiag files and create correlation matrix')
     parser.add_argument('--instrument',help = 'instrument name to process', required = True, dest='instrument')
@@ -82,6 +122,7 @@ if __name__ == "__main__":
     parser.add_argument('--diagtype', help = 'specify to copy ges or anl.', required = False, dest = 'diagtype',default="anl")
     parser.add_argument('--select', help="select obs omf oma", dest='select', required=False, default='omf' )
     parser.add_argument('--target', help="select obs omf oma", dest='target', required=False, default='0.1' )
+    parser.add_argument('--no-maps', help="turn of generating OmF maps/histograms.", dest='maps', action='store_false' )
     a = parser.parse_args()
 
     #if a.instrument not in list(sensorOzoneChannelSets.keys()): sys.exit("'{}' instrument unknown".format(a.instrument))
@@ -100,4 +141,4 @@ if __name__ == "__main__":
     #files = glob.glob( os.path.join(a.path,'*'+a.instrument+'*.nc4') )
 
     files = getFiles(a.start, a.end, a.instrument, a.ops, a.experiment, a.diagtype, 'nc4')
-    main(files, ichans, a.select, float(a.target))    
+    main(files, ichans, a.select, float(a.target), a.maps)    
