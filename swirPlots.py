@@ -5,7 +5,7 @@ import matplotlib
 matplotlib.use('Agg')
 from datetime import timedelta, date, datetime
 import matplotlib.pyplot as plt
-from lib.maps import plotMapHist 
+from graphics.maps import plotMapHist 
 # these tools are Will's.  They are available from:
 #    https://github.com/will-mccarty/das_tools
 # which also is in 
