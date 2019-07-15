@@ -5,8 +5,7 @@ from lib.gsiCovarianceFile import gsiCovarianceFile
 from matplotlib import pyplot as plt
 if __name__ == "__main__":
     parser = argparse.ArgumentParser( description = 'read ncdiag files and create correlation matrix')
-    parser.add_argument('--path', help = 'path to ncdiag', required = True, dest = 'path')
-    parser.add_argument('--outpath', help = 'path to ncdiag', required = True, dest = 'outpath')
+    parser.add_argument('--path', help = 'path to binary file to read in.', required = True, dest = 'path')
     parser.add_argument('--instrument',help = 'instrument name to process', required = True, dest='instrument')
     a = parser.parse_args()
 
@@ -63,7 +62,7 @@ if __name__ == "__main__":
         if(ig in chans2add): print(ig,np.where(ig == ibufrSubset)[0][0]+1)
  
     #print('Reading binary file for use in the GSI.')
-    gsi = gsiCovarianceFile( os.path.join(a.outpath, a.instrument+'.bin') )
+    gsi = gsiCovarianceFile( a.path )
     _, R = gsi.get()
     #R = 0.5*np.random.rand(len(igsi),len(igsi))
     igsi_positions = {}
@@ -78,8 +77,9 @@ if __name__ == "__main__":
             elif i==j:
                 newR[i,j] = new_variances[chn_i]  
     gsi.set(igsi_new, newR)
+    gsi.setName( os.path.join(os.path.split(a.path)[0], os.path.split(a.path)[1]+'_ozone_added.bin'))
     gsi.write()
     plt.matshow(newR)
     plt.colorbar()
-    plt.savefig(a.instrument+'.png', dpi=1200)
+    plt.savefig(os.path.join(os.path.split(a.path)[0], a.instrument+'.png'), dpi=1200)
     
