@@ -1,7 +1,7 @@
 from scipy.io import FortranFile
 import numpy as np
 
-class gsiCovariance:
+class gsiCovarianceFile:
     def __init__(self, filename ):
         self.fname = filename
     def setName(self, filename):
@@ -42,8 +42,8 @@ class gsiCovariance:
         f.write_record(self.channelIdx)
         f.write_record(self.R.T)
         f.close()
-
-iasi = gsiCovariance('iasi_metop_sea_rcov.bin')
+"""
+iasi = gsiCovarianceFile('iasi_metop_sea_rcov.bin')
 iasi.read()
 idx,R = iasi.get()
 print(idx,R)
@@ -51,12 +51,12 @@ print(R.max(), R.min())
 iasi.setName('my_iasi.bin')
 iasi.write()
 
-airs = gsiCovariance('airs_aqua_sea_rcov.bin')
+airs = gsiCovarianceFile('airs_aqua_sea_rcov.bin')
 airs.read()
 idx,R = airs.get()
 print(idx,R)
 print(R.max(),R.min())
 airs.setName('my_airs.bin')
 airs.write()
-
+"""
 

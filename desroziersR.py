@@ -16,8 +16,9 @@ import matplotlib.pyplot as plt
 # ncdiag.py is an interface to handle the netcdf4 obs diag files 
 import gmao_tools as gt
 import ncdiag as ncd
+from lib.gsiCovarianceFile import gsiCovarianceFile
 
-def main(filesAnl, filesGes, ichans, igeos, nThreads, outpath, instrument, select_obs_omf_oma):
+def main(filesAnl, filesGes, ichans, igeos, igsi, nThreads, outpath, instrument, select_obs_omf_oma):
     # loop through files and process.
     fgroups = []
     for i,f in enumerate(filesAnl):
@@ -60,6 +61,11 @@ def main(filesAnl, filesGes, ichans, igeos, nThreads, outpath, instrument, selec
         dset = f.create_dataset("overallMeanOmf",data = overallMeanOmf)
         dset = f.create_dataset("observationCount",data = observationCount)
         dset = f.create_dataset("channels",data = ichans)
+
+    print('Writing binary file for use in the GSI.')
+    gsi = gsiCovarianceFile( os.path.join(outpath, instrument+'.bin') )
+    gsi.set(igsi, combinedR)
+    gsi.write()
     print("Done!")
 
 def covarianceToCorrelation(covariance):
@@ -219,15 +225,21 @@ if __name__ == "__main__":
     idxBufrSubset = np.asarray(h5['idxBufrSubset']).astype('int')
     ichans = np.asarray(h5['geosAssimilated']).astype('int').tolist()
     igeos = np.asarray(h5['geosAssimilated']).astype('int').tolist()
-    idxNucapsOzoneInInstrument = np.asarray(h5['idxNucapsOzoneInInstrument']).astype('int')
+    idxNucapsOzoneInInstrument = np.asarray(h5['idxNucapsOzoneInInstrument']).astype('int') 
+    ibufrSubset = np.asarray(h5['idxBufrSubset']).astype('int')
+
     #for i in idxBufrSubset:
     #    if i >= min(idxNucapsOzoneInInstrument) and i <= max(idxNucapsOzoneInInstrument):
     #        ichans.append(i)
-
     ichans.sort()
-    
+
+    # generate gsi style index for gsi R covariance file.
+    igsi = []
+    for ig in igeos: 
+        igsi.append(np.where(ig == ibufrSubset)[0][0]+1)
+ 
     # use given path and grab all nc diag files with instrument name in them.
     filesAnl = glob.glob( os.path.join(a.path,'anl','*'+a.instrument+'*.nc4') )
     filesGes = glob.glob( os.path.join(a.path,'ges','*'+a.instrument+'*.nc4') )
-
-    main(filesAnl,filesGes, ichans, igeos, a.nthreads, a.outpath, a.instrument, a.select)    
+    
+    main(filesAnl,filesGes, ichans, igeos, igsi, a.nthreads, a.outpath, a.instrument, a.select)    
