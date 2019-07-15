@@ -1,0 +1,6 @@
+[submodule "lib/graphics"]
+	path = lib/graphics
+	url = https://github.com/karpob/graphics
+[submodule "lib/das_tools"]
+	path = lib/das_tools
+	url = https://github.com/will-mccarty/das_tools

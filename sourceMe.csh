@@ -3,7 +3,7 @@
 #module load python/anaconda/5.2.0/3.6
 # bit to add Will's library
 if ( ! ($?PYTHONPATH) ) then
-    setenv PYTHONPATH $PWD/das_tools/python_tools
+    setenv PYTHONPATH $PWD/lib/das_tools/python_tools
 else
-    setenv PYTHONPATH $PYTHONPATH\:$PWD/das_tools/python_tools
+    setenv PYTHONPATH $PYTHONPATH\:$PWD/lib/das_tools/python_tools
 endif 

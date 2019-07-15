@@ -1,1 +1,1 @@
-export PYTHONPATH=$PYTHONPATH:$PWD/das_tools/python_tools
+export PYTHONPATH=$PYTHONPATH:$PWD/lib/das_tools/python_tools
