@@ -2,6 +2,8 @@
 import argparse, os, sys, glob, h5py
 import numpy as np
 from lib.gsiCovarianceFile import gsiCovarianceFile
+import matplotlib
+matplotlib.use('Agg')
 from matplotlib import pyplot as plt
 if __name__ == "__main__":
     parser = argparse.ArgumentParser( description = 'read ncdiag files and create correlation matrix')
@@ -10,7 +12,6 @@ if __name__ == "__main__":
     a = parser.parse_args()
 
     if not os.path.exists(a.path): sys.exit("'{} path does not exist.".format(a.path))
-    if not os.path.exists(a.outpath): sys.exit("'{} outpath does not exist.".format(a.outpath))
 
     h5 = h5py.File('etc/'+a.instrument+'_wavenumbers.h5','r')
     idxBufrSubset = np.asarray(h5['idxBufrSubset']).astype('int')
@@ -63,6 +64,7 @@ if __name__ == "__main__":
  
     #print('Reading binary file for use in the GSI.')
     gsi = gsiCovarianceFile( a.path )
+    gsi.read()
     _, R = gsi.get()
     #R = 0.5*np.random.rand(len(igsi),len(igsi))
     igsi_positions = {}
