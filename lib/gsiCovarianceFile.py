@@ -39,7 +39,7 @@ class gsiCovarianceFile:
         f = FortranFile( self.fname, 'w' )
         nchan = len(self.channelIdx)
         f.write_record( np.array([nchan, 8], dtype=np.int32) )
-        f.write_record(self.channelIdx.astype(np.int32))
+        f.write_record(np.asarray(self.channelIdx).astype(np.int32))
         f.write_record(self.R.T.astype(np.float64))
         f.close()
 """
