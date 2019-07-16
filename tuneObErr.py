@@ -58,14 +58,15 @@ def getFiles(start, end, instrument, opsPath, experimentName, anlOrGes, ncOrBin)
 
     # basepath
     pathInit =  os.path.join(opsPath, experimentName, 'obs')
-    
+    print('pathInit',pathInit) 
     # get start/end date, put in datetime
     startDate = date(startYear, startMonth, startDay)
     endDate = date(endYear, endMonth, endDay)
-
+    print(startDate, endDate)
     for today in dateRange(startDate, endDate):
         for hour in ['00','06','12','18']:
             path = os.path.join(pathInit, today.strftime("Y%Y/M%m/D%d"), 'H'+hour)
+            print(path)
             if not os.path.exists(path): print(path +'does not exist.' )
             else:
                 if( len( glob.glob(path+'/*'+instrument+'*'+anlOrGes+'*.'+ncOrBin) ) > 0): 
@@ -84,10 +85,12 @@ def processFile(f, ichans, select_obs_omf_oma, target, mapsOn):
     print("Channel  mean(omf_uncorrected)    mean(omf_corrected)  cpen             RMS(omf)         STD(omf)        mean(sigo) ")
     for i in list(ichans):
         subsetChan, = np.where(sensor_chan == i)[0] + 1
-        mask = '(ichan == {:d}) & (qcmark == 0) & ( ob > 0.0 )'.format(subsetChan)
+        #mask = '(ichan == {:d}) & (qcmark == 0) & ( ob > 0.0 )'.format(subsetChan)
+        mask = '(ichan == {:d})'.format(subsetChan)
         d1.set_mask(mask)
         d1.use_mask(True)
         omf = d1.v('omf')
+        obs = d1.v('obs')
         #oma = d1.v('oma')
         lat = d1.v('lat')
         lon = d1.v('lon')
@@ -106,7 +109,7 @@ def processFile(f, ichans, select_obs_omf_oma, target, mapsOn):
         s['sigo'] = d1.v('sigo').mean()
         s['sigo_desired'] = sigoDesired
         if(mapsOn):
-            plotMapHist(lat, lon, omf, 'Channel {:d} OMF for file {}'.format(i,os.path.basename(f)), os.path.basename(f)+'_Chan{:d}'.format(i), units='Kelvin') 
+            plotMapHist(lat, lon, omfnbc, 'Channel {:d} OMF for file {}'.format(i,os.path.basename(f)), os.path.basename(f)+'_Chan{:d}'.format(i), units='Kelvin') 
         print( "{:d}     {:10.7f}               {:10.7f}           {:10.7f}       {:10.7f}       {:10.7f}     {:10.7f}  {:10.7f}".format(\
                   i,    s['bias'],          s['omf'],        s['penalty'],         s['rmse'] , s['std'], s['sigo'], s['sigo_desired'] ) )
     
@@ -131,8 +134,9 @@ if __name__ == "__main__":
     instrumentChan = {}
     instrumentChan['iasi'] = [1427, 1479, 1536, 1579, 1585, 1626, 1643, 1671]
     instrumentChan['airs'] = [1012, 1024, 1088, 1111, 1120, 1669] 
-    instrumentChan['cris_npp'] = [577, 607, 626, 650, 667, 945, 991, 994]
+    instrumentChan['cris_npp'] = [266, 577, 607, 626, 650, 667, 945, 991, 994]
     instrumentChan['cris-fsr'] = [596, 626, 646, 659]  
+    instrumentChan['cris-fsr_npp'] = [596, 626, 646, 659]  
 
     ichans = instrumentChan[a.instrument]
     ichans.sort()
