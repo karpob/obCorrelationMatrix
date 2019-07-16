@@ -56,6 +56,12 @@ if __name__ == "__main__":
 
     here = os.path.dirname(os.path.abspath(__file__))
     if (a.binornc == 'bin'): convertList = open( os.path.join( here, 'convert.list_'+a.instrument+'_'+a.experiment), 'w' )
+
+    fstring = " ".join(files)
+    print("dmget on files "+fstring)
+    os.system('dmget '+ fstring)
+    print('done dmget.')
+
     for f in files:
         print('copying',f+' to '+ os.path.join( fullPath, os.path.split(f)[1] ) )
 
