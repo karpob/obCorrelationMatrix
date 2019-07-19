@@ -5,7 +5,10 @@ from functools import partial
 
 #    module load other/SSSO_Ana-PyD/SApd_4.2.0_py3.5
 import numpy as np
-import matplotlib.pyplot as plt
+
+import matplotlib
+matplotlib.use('Agg')
+from matplotlib import pyplot as plt
 # these tools are Will's.  They are available from:
 #    https://github.com/will-mccarty/das_tools
 # which also is in 
@@ -63,9 +66,13 @@ def main(filesAnl, filesGes, ichans, igeos, igsi, nThreads, outpath, instrument,
         dset = f.create_dataset("channels",data = ichans)
 
     print('Writing binary file for use in the GSI.')
+    # Last step (which I forgot), and is probably necessary in most cases)- Symmetrize Desroziers estimate of R.
+    mR = np.asmatrix(combinedR)
+    mR = 0.5*(mR+mR.T)
     gsi = gsiCovarianceFile( os.path.join(outpath, instrument+'.bin') )
-    gsi.set(igsi, combinedR)
+    gsi.set( igsi, np.asarray(mR) )
     gsi.write()
+    gsi.plot()
     print("Done!")
 
 def covarianceToCorrelation(covariance):
@@ -227,12 +234,21 @@ if __name__ == "__main__":
     igeos = np.asarray(h5['geosAssimilated']).astype('int').tolist()
     idxNucapsOzoneInInstrument = np.asarray(h5['idxNucapsOzoneInInstrument']).astype('int') 
     ibufrSubset = np.asarray(h5['idxBufrSubset']).astype('int')
-
+    ozoneChans = {}
+    ozoneChans['iasi'] = [ 1427, 1479, 1536, 1579, 1585, 1626, 1643, 1671 ]
+    ozoneChans['airs'] = [ 1012, 1024, 1088, 1111, 1120]
+    ozoneChans['cris-fsr'] = [ 596, 626, 646, 659 ] 
+    ozoneChans['cris'] = [ 577, 607, 626, 650, 667 ]
+    if(a.instrument in list(ozoneChans.keys())):
+        for c in ozoneChans[a.instrument]:
+            ichans.append(c)
+            igeos.append(c)
+           
     #for i in idxBufrSubset:
     #    if i >= min(idxNucapsOzoneInInstrument) and i <= max(idxNucapsOzoneInInstrument):
     #        ichans.append(i)
     ichans.sort()
-
+    igeos.sort()
     # generate gsi style index for gsi R covariance file.
     igsi = []
     for ig in igeos: 
@@ -241,5 +257,6 @@ if __name__ == "__main__":
     # use given path and grab all nc diag files with instrument name in them.
     filesAnl = glob.glob( os.path.join(a.path,'anl','*'+a.instrument+'*.nc4') )
     filesGes = glob.glob( os.path.join(a.path,'ges','*'+a.instrument+'*.nc4') )
-    
+    filesAnl.sort()
+    filesGes.sort() 
     main(filesAnl,filesGes, ichans, igeos, igsi, a.nthreads, a.outpath, a.instrument, a.select)    

@@ -1,5 +1,8 @@
 from scipy.io import FortranFile
 import numpy as np
+import matplotlib
+matplotlib.use('Agg')
+from matplotlib import pyplot as plt
 
 class gsiCovarianceFile:
     def __init__(self, filename ):
@@ -26,6 +29,10 @@ class gsiCovarianceFile:
         Return the actual values from the file.
         """
         return self.channelIdx, self.R
+    def plot(self):
+        plt.matshow(self.R)
+        plt.colorbar()
+        plt.savefig(self.fname+'.png',dpi=1200) 
     def set(self, idx, R):
         """
         set the channel idx and R for the file.
@@ -48,6 +55,9 @@ iasi.read()
 idx,R = iasi.get()
 print(idx,R)
 print(R.max(), R.min())
+plt.matshow(R)
+plt.colorbar()
+plt.savefig('iasi'+'.png') 
 iasi.setName('my_iasi.bin')
 iasi.write()
 
@@ -56,7 +66,10 @@ airs.read()
 idx,R = airs.get()
 print(idx,R)
 print(R.max(),R.min())
+
+plt.matshow(R)
+plt.colorbar()
+plt.savefig('airs'+'.png') 
 airs.setName('my_airs.bin')
 airs.write()
 """
-
