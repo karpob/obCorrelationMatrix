@@ -85,8 +85,8 @@ def processFile(f, ichans, select_obs_omf_oma, target, mapsOn):
     print("Channel  mean(omf_uncorrected)    mean(omf_corrected)  cpen             RMS(omf)         STD(omf)        mean(sigo) ")
     for i in list(ichans):
         subsetChan, = np.where(sensor_chan == i)[0] + 1
-        #mask = '(ichan == {:d}) & (qcmark == 0) & ( ob > 0.0 )'.format(subsetChan)
-        mask = '(ichan == {:d})'.format(subsetChan)
+        mask = '(ichan == {:d}) & (qcmark == 0) & ( ob > 0.0 )'.format(subsetChan)
+        #mask = '(ichan == {:d})'.format(subsetChan)
         d1.set_mask(mask)
         d1.use_mask(True)
         omf = d1.v('omf')
