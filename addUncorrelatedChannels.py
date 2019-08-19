@@ -20,31 +20,29 @@ if __name__ == "__main__":
     idxNucapsOzoneInInstrument = np.asarray(h5['idxNucapsOzoneInInstrument']).astype('int') 
     if (a.instrument == 'airs'):
         ibufrSubset = np.asarray(h5['idxBufrSubset']).astype('int')
-        chans2add = [1012, 1024, 1088, 1111, 1120]
+        chans2add = [1012, 1088, 1111, 1120]
         chans2add_gsi =[]
         for c in chans2add:
             chans2add_gsi.append(np.where(c == ibufrSubset)[0][0]+1)
         new_variances = {}
         new_variances[chans2add_gsi[0]] = 1.7
         new_variances[chans2add_gsi[1]] = 1.0
-        new_variances[chans2add_gsi[2]] = 1.0
+        new_variances[chans2add_gsi[2]] = 1.4
         new_variances[chans2add_gsi[3]] = 1.4
-        new_variances[chans2add_gsi[4]] = 1.4
     elif(a.instrument == 'iasi'):
         ibufrSubset = np.asarray(h5['idxBufrSubset']).astype('int')
-        chans2add = [1427, 1479, 1536, 1579, 1585, 1626, 1643, 1671]
+        chans2add = [1427, 1536, 1579, 1585, 1626, 1643, 1671]
         chans2add_gsi =[]
         for c in chans2add:
             chans2add_gsi.append(np.where(c == ibufrSubset)[0][0]+1)
         new_variances = {}
         new_variances[chans2add_gsi[0]] = 1.6
-        new_variances[chans2add_gsi[1]] = 1.4
-        new_variances[chans2add_gsi[2]] = 1.6
-        new_variances[chans2add_gsi[3]] = 1.5
+        new_variances[chans2add_gsi[1]] = 1.6
+        new_variances[chans2add_gsi[2]] = 1.5
+        new_variances[chans2add_gsi[3]] = 1.4
         new_variances[chans2add_gsi[4]] = 1.4
-        new_variances[chans2add_gsi[5]] = 1.4
-        new_variances[chans2add_gsi[6]] = 1.7
-        new_variances[chans2add_gsi[7]] = 1.6
+        new_variances[chans2add_gsi[5]] = 1.7
+        new_variances[chans2add_gsi[6]] = 1.6
 
     igeos_new = np.asarray(h5['geosAssimilated']).astype('int').tolist()
     for c in chans2add:
