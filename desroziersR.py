@@ -235,10 +235,10 @@ if __name__ == "__main__":
     idxNucapsOzoneInInstrument = np.asarray(h5['idxNucapsOzoneInInstrument']).astype('int') 
     ibufrSubset = np.asarray(h5['idxBufrSubset']).astype('int')
     ozoneChans = {}
-    ozoneChans['iasi'] = [ 1427, 1479, 1536, 1579, 1585, 1626, 1643, 1671 ]
-    ozoneChans['airs'] = [ 1012, 1024, 1088, 1111, 1120]
+    ozoneChans['iasi'] = [ 1427, 1536, 1579, 1585, 1626, 1643, 1671 ]
+    ozoneChans['airs'] = [ 1012, 1088, 1111, 1120]
     ozoneChans['cris-fsr'] = [ 596, 626, 646, 659 ] 
-    ozoneChans['cris'] = [ 577, 607, 626, 650, 667 ]
+    ozoneChans['cris'] = [ 577, 607, 626, 650  ]
     if(a.instrument in list(ozoneChans.keys())):
         for c in ozoneChans[a.instrument]:
             ichans.append(c)
