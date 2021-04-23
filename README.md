@@ -19,11 +19,12 @@ Where files like ```x41_swir.diag_cris-fsr_n20_anl.20191221_18z.nc4``` would go 
 To run the script:
 ```source sourceMe.csh``` 
 Then the usage for the script itself:
+```
 usage: desroziersR.py [-h] --path PATH --outpath OUTPATH --instrument
                       INSTRUMENT [--all] [--nthreads NTHREADS]
                       [--select SELECT]
 desroziersR.py: error: the following arguments are required: --path, --outpath, --instrument
-
+```
 So for a given set of diag files as given in the directory structure above:
 ```
 ./desroziersR.py --path /discover/nobackup/projects/gmao/obsdev/bkarpowi/tmp_swir_diags --outpath $PWD --instrument cris-fsr --nthreads 2 
