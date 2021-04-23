@@ -1,12 +1,10 @@
 # code to come up with a correlation matrix based on observations.
-you need to make sure to checkout submodules, do this by:
-```
-git clone 
-or after clone
+you need to make sure to checkout the "feature/swir" branch, along with submodules submodules, do this by:
 ```shell
+git clone https://github.com/karpob/obCorrelationMatrix.git
+git checkout feature/swir
 git submodule update --init --recursive
 ```
-
 
 Main script of interest is probably desroziersR.py which computes the so-called R matrix (observation error covariance). This can be run on gsi netcdf "diag" files that are placed into the following structure, for example:
 ```
