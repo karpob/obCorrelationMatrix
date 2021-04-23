@@ -37,7 +37,7 @@ Once the script is completed it will produce the following:
 cris-fsr.h5 
 cris-fsr.bin
 ```
-The first file can be used to generate plots, the second cand be read in by the GSI.
+The first file can be used to generate plots, the second can be read in by the GSI.
 Then to plot the correlation matrix:
 ```
 ./plotCorrelationMatrixAll.py
