@@ -21,7 +21,7 @@ import gmao_tools as gt
 import ncdiag as ncd
 from lib.gsiCovarianceFile import gsiCovarianceFile
 
-def main(filesAnl, filesGes, ichans, igeos, igsi, nThreads, outpath, instrument, select_obs_omf_oma):
+def main(filesAnl, filesGes, nThreads, outpath, instrument, select_obs_omf_oma):
     # loop through files and process.
     fgroups = []
     for i,f in enumerate(filesAnl):
@@ -32,7 +32,7 @@ def main(filesAnl, filesGes, ichans, igeos, igsi, nThreads, outpath, instrument,
     # pass ichans in as non-iterable via partial.
     print("Initialized Pool.")
     print( "Processing {} files.".format( len(fgroups) ) )
-    obStatsList = p.map( partial(processFile, ichans = ichans, igeos= igeos, select_obs_omf_oma = select_obs_omf_oma), fgroups)
+    obStatsList = p.map( partial(processFile, select_obs_omf_oma = select_obs_omf_oma), fgroups)
     print("Swapping out dictionaries for arrays.")
     # convert list of dictionaries to dictionary of numpy arrays
     obStats = listOfDictsToDictOfLists(obStatsList)        
@@ -52,7 +52,21 @@ def main(filesAnl, filesGes, ichans, igeos, igsi, nThreads, outpath, instrument,
     correlationCombinedOma = covarianceToCorrelation( covarianceCombinedOma )
     correlationCombinedR = covarianceToCorrelation( combinedR )
    
-    print('Writing File: {}'.format( os.path.join(outpath, instrument+'.h5') ) )
+    print('Writing File: {}'.format( os.path.join(outpath, instrument+'desR.h5') ) )
+    # get channel information for first GES diag file.
+    d1 = ncd.obs(filesGes[0])
+    sensor_chan = d1.v('sensor_chan')
+    use_flag = d1.v('use_flag')
+    idx_use, = np.where(use_flag == 1)
+    ichans = sensor_chan[idx_use]
+
+    h5 = h5py.File('etc/'+a.instrument+'_wavenumbers.h5','r')
+    ibufrSubset = np.asarray(h5['idxBufrSubset']).astype('int')
+    igsi = []
+    for ig in ichans: 
+        igsi.append(np.where(ig == ibufrSubset)[0][0]+1)
+
+
     with h5py.File( os.path.join(outpath, instrument+'.h5'),"w" ) as f:
         dset = f.create_dataset("correlationCombinedOmf",data = correlationCombinedOmf)
         dset = f.create_dataset("covarianceCombinedOmf",data = covarianceCombinedOmf)
@@ -99,14 +113,16 @@ def listOfDictsToDictOfLists(listOfDicts):
     return dictOfLists
 
 
-def processFile(fs, ichans, igeos, select_obs_omf_oma ):
+def processFile(fs, select_obs_omf_oma ):
     print( 'Processing Files {} {}'.format(fs[0],fs[1]) ) 
     # input is list of files 1st file ges, second file anl
     d1 = ncd.obs(fs[0])
     d2 = ncd.obs(fs[1])
     sensor_chan = d1.v('sensor_chan')
+    use_flag = d1.v('use_flag')
+    idx_use, = np.where(use_flag == 1)
     # if ichans is an empty list, use alll sensor_chans
-    if(len(ichans) == 0): ichans = sensor_chan
+    ichans = sensor_chan[idx_use]
     # get locations where all channels pass QC.
     ombList = []
     omaList = []
@@ -116,11 +132,6 @@ def processFile(fs, ichans, igeos, select_obs_omf_oma ):
     waterList = []
     qcListA = []
     waterListA = []
-    # create idx associated with geos assimilated channel
-    idx_geos_assim = []
-    for ii,c in enumerate(ichans):
-        if (c in igeos):
-            idx_geos_assim.append(ii)
     # go through each channel, filter it using ncdiag API, 
     # create a big list of observations (spatial dimension) for a given channel, 
     # add the list for a given channel to the bigger list so obList[channel][spatial]
@@ -159,8 +170,8 @@ def processFile(fs, ichans, igeos, select_obs_omf_oma ):
 
     # filtering manually in python by location. Any channel at a location bad, drop all channels at that observation point.
     for i in range(ombArray.shape[0]):
-        if( any( waterArrayA[i,:] < 1.0 ) or any(qcArrayA[i,idx_geos_assim] != 0) or\
-            any( waterArray[i,:] < 1.0 ) or any(qcArray[i,idx_geos_assim] != 0) or any(obArray[i,:] <= 0) ):
+        if( any( waterArrayA[i,:] < 1.0 ) or any(qcArrayA[i,:] != 0) or\
+            any( waterArray[i,:] < 1.0 ) or any(qcArray[i,:] != 0) or any(obArray[i,:] <= 0) ):
             badLocs.append(i) 
     ombArray = np.delete(ombArray, badLocs, axis=0)                
     omaArray = np.delete(omaArray, badLocs, axis=0)                
@@ -227,36 +238,14 @@ if __name__ == "__main__":
     #if a.instrument not in list(sensorOzoneChannelSets.keys()): sys.exit("'{}' instrument unknown".format(a.instrument))
     if not os.path.exists(a.path): sys.exit("'{} path does not exist.".format(a.path))
     if not os.path.exists(a.outpath): sys.exit("'{} outpath does not exist.".format(a.outpath))
-
-    h5 = h5py.File('etc/'+a.instrument+'_wavenumbers.h5','r')
-    idxBufrSubset = np.asarray(h5['idxBufrSubset']).astype('int')
-    ichans = np.asarray(h5['geosAssimilated']).astype('int').tolist()
-    igeos = np.asarray(h5['geosAssimilated']).astype('int').tolist()
-    idxNucapsOzoneInInstrument = np.asarray(h5['idxNucapsOzoneInInstrument']).astype('int') 
-    ibufrSubset = np.asarray(h5['idxBufrSubset']).astype('int')
-    ozoneChans = {}
-    ozoneChans['iasi'] = [ 1427, 1536, 1579, 1585, 1626, 1643, 1671 ]
-    ozoneChans['airs'] = [ 1012, 1088, 1111, 1120]
-    ozoneChans['cris-fsr'] = [ 596, 626, 646, 659 ] 
-    ozoneChans['cris'] = [ 577, 607, 626, 650  ]
-    if(a.instrument in list(ozoneChans.keys())):
-        for c in ozoneChans[a.instrument]:
-            ichans.append(c)
-            igeos.append(c)
-           
-    #for i in idxBufrSubset:
-    #    if i >= min(idxNucapsOzoneInInstrument) and i <= max(idxNucapsOzoneInInstrument):
-    #        ichans.append(i)
-    ichans.sort()
-    igeos.sort()
-    # generate gsi style index for gsi R covariance file.
-    igsi = []
-    for ig in igeos: 
-        igsi.append(np.where(ig == ibufrSubset)[0][0]+1)
  
     # use given path and grab all nc diag files with instrument name in them.
     filesAnl = glob.glob( os.path.join(a.path,'anl','*'+a.instrument+'*.nc4') )
     filesGes = glob.glob( os.path.join(a.path,'ges','*'+a.instrument+'*.nc4') )
+    print(a.path,a.instrument)
+    print(os.path.join(a.path,'ges','*'+a.instrument+'*.nc4'))
+    print(filesAnl)
+    print(filesGes)
     filesAnl.sort()
     filesGes.sort() 
-    main(filesAnl,filesGes, ichans, igeos, igsi, a.nthreads, a.outpath, a.instrument, a.select)    
+    main(filesAnl,filesGes, a.nthreads, a.outpath, a.instrument, a.select)    

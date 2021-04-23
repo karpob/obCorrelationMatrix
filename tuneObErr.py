@@ -132,11 +132,20 @@ if __name__ == "__main__":
     #if not os.path.exists(a.path): sys.exit("'{} path does not exist.".format(a.path))
     
     instrumentChan = {}
-    instrumentChan['iasi'] = [1427, 1479, 1536, 1579, 1585, 1626, 1643, 1671]
-    instrumentChan['airs'] = [1012, 1024, 1088, 1111, 1120, 1669] 
-    instrumentChan['cris_npp'] = [266, 577, 607, 626, 650, 667, 945, 991, 994]
-    instrumentChan['cris-fsr'] = [596, 626, 646, 659]  
-    instrumentChan['cris-fsr_npp'] = [596, 626, 646, 659]  
+    #instrumentChan['iasi'] = [1427, 1479, 1536, 1579, 1585, 1626, 1643, 1671]
+    #instrumentChan['airs'] = [1012, 1024, 1088, 1111, 1120, 1669] 
+    #instrumentChan['cris_npp'] = [266, 577, 607, 626, 650, 667, 945, 991, 994]
+    """ Based on NOAA selection.
+    instrumentChan['cris-fsr_n20'] = [  95,  99, 103, 107, 109, 127, 131, 125, 121, 123, 153,
+                                      1949,1950,1951,1952,1953,1954,1955,1956,1957,1958,1959] 
+    """
+    #Based on GMAO x0041 selection
+    #instrumentChan['cris-fsr_n20'] = [  95,  99, 104, 107, 104, 126, 130, 126, 120, 123, 153,
+    #                                  1949,1950,1951,1952,1953,1954,1955,1956,1957,1958,1959] 
+     
+    instrumentChan['cris-fsr_n20'] = [  95, 104, 104, 130,
+                                      1949,1951,1953,1955,1945,1947,2143] 
+    #instrumentChan['cris-fsr_npp'] = [596, 626, 646, 659]  
 
     ichans = instrumentChan[a.instrument]
     ichans.sort()

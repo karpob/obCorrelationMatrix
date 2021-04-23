@@ -19,13 +19,16 @@ def getFiles(start, end, instrument, opsPath, experimentName, anlOrGes, ncOrBin)
     # get start/end date, put in datetime
     startDate = date(startYear, startMonth, startDay)
     endDate = date(endYear, endMonth, endDay)
-
+    print (startDate)
+    print(endDate)
     for today in dateRange(startDate, endDate):
         for hour in ['00','06','12','18']:
             path = os.path.join(pathInit, today.strftime("Y%Y/M%m/D%d"), 'H'+hour)
+            print(path)
             if not os.path.exists(path): print(path +'does not exist.' )
             else:
                 if( len( glob.glob(path+'/*'+instrument+'*'+anlOrGes+'*.'+ncOrBin) ) > 0): 
+                    print('path: '+path+'/*'+instrument+'*'+anlOrGes+'*.'+ncOrBin)
                     files.append(glob.glob(path+'/*'+instrument+'*'+anlOrGes+'*.'+ncOrBin)[0])
     return files            
 
