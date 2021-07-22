@@ -50,6 +50,11 @@ def main(filesAnl, filesGes, nThreads, outpath, instrument, select_obs_omf_oma):
     print("Computing Correlation.")
     correlationCombinedOmf = covarianceToCorrelation( covarianceCombinedOmf )
     correlationCombinedOma = covarianceToCorrelation( covarianceCombinedOma )
+
+    # Symmetrize Desroziers estimate of R.
+    mR = np.asmatrix(combinedR)
+    mR = 0.5*(mR+mR.T)
+    combinedR = np.asarray(mR)
     correlationCombinedR = covarianceToCorrelation( combinedR )
    
     print('Writing File: {}'.format( os.path.join(outpath, instrument+'desR.h5') ) )
@@ -80,11 +85,8 @@ def main(filesAnl, filesGes, nThreads, outpath, instrument, select_obs_omf_oma):
         dset = f.create_dataset("channels",data = ichans)
 
     print('Writing binary file for use in the GSI.')
-    # Last step (which I forgot), and is probably necessary in most cases)- Symmetrize Desroziers estimate of R.
-    mR = np.asmatrix(combinedR)
-    mR = 0.5*(mR+mR.T)
     gsi = gsiCovarianceFile( os.path.join(outpath, instrument+'.bin') )
-    gsi.set( igsi, np.asarray(mR) )
+    gsi.set( igsi, np.asarray(combinedR) )
     gsi.write()
     gsi.plot()
     print("Done!")

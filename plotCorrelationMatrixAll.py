@@ -15,15 +15,15 @@ def plotInstrument(instrument):
     wavenumbers = wavenumbersAll[ichan]
     idxBufrSubset = ichan
     print("read instrument: {}".format(instrument))
-
     plt.matshow(corr)
     fig = plt.gcf()
     fig.set_size_inches(20,20)
     wavenumbersRounded = []
     for w in wavenumbers:
         wavenumbersRounded.append('{:10.3f}'.format(w))
-    plt.xticks(np.arange(len(idxBufrSubset)),wavenumbersRounded,fontsize=8,rotation='vertical')
-    plt.yticks(np.arange(len(idxBufrSubset)),wavenumbersRounded,fontsize=8)
+    plt.xticks(np.arange(len(idxBufrSubset)),wavenumbersRounded,fontsize=18,rotation='vertical')
+    plt.yticks(np.arange(len(idxBufrSubset)),wavenumbersRounded,fontsize=18)
+    plt.clim(-1,1) 
     plt.colorbar()
     plt.savefig(instrument+'_all.png')
     plt.close()
@@ -32,11 +32,13 @@ def plotInstrument(instrument):
     idx, = np.where( (wavenumbers>=2380.) & (wavenumbers<=2510.0))
     cor1 = corr[idx,:]
     cor2 = cor1[:,idx]
+
     plt.matshow(cor2)
     fig = plt.gcf()
     fig.set_size_inches(20,20)
-    plt.xticks(np.arange(len(idx)),np.asarray(wavenumbersRounded)[idx],fontsize=8,rotation='vertical')
-    plt.yticks(np.arange(len(idx)),np.asarray(wavenumbersRounded)[idx],fontsize=8)
+    plt.xticks(np.arange(len(idx)),np.asarray(wavenumbersRounded)[idx],fontsize=12,rotation='vertical')
+    plt.yticks(np.arange(len(idx)),np.asarray(wavenumbersRounded)[idx],fontsize=12)
+    plt.clim(-1,1) 
     plt.colorbar()
     plt.savefig(instrument+'_swir.png')
     plt.close()
